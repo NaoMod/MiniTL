@@ -46,11 +46,13 @@ public class LRPHandler implements ILRPHandler {
     public ParseResponse parse(ParseArguments args) throws Exception {
     	XtextResourceSet rs = injector.<XtextResourceSet>getInstance(XtextResourceSet.class);
     	
-    	String platformPath = Paths.get(BASE_FOLDER, args.getSourceFile()).toString();
+    	String path = args.getSourceFile().split(BASE_FOLDER)[1];
+    	
+    	String platformPath = Paths.get(BASE_FOLDER, path).toString();
         URI transfoFileURI = URI.createPlatformPluginURI(platformPath, true);
         Resource transfoResource = rs.getResource(transfoFileURI, true);
         
-        Path parentPath = Paths.get(args.getSourceFile()).getParent();
+        Path parentPath = Paths.get(path).getParent();
         String parentPathString = parentPath == null ? "" : parentPath.toString();
         
         String currentPathString = new File(".").getAbsolutePath();
@@ -79,10 +81,12 @@ public class LRPHandler implements ILRPHandler {
         if (!asts.containsKey(args.getSourceFile()))
             throw new Exception("No AST for file \'" + args.getSourceFile() + "\'.");
         
-        String inputModelPlatformPath = Paths.get(BASE_FOLDER, args.getInputModel()).toString();
+        String inputPath = args.getInputModel().split(BASE_FOLDER)[1];
+        String inputModelPlatformPath = Paths.get(BASE_FOLDER, inputPath).toString();
         String inputModelURIString = URI.createPlatformPluginURI(inputModelPlatformPath, true).toString();
         
-        String outputModelPlatformPath = Paths.get(BASE_FOLDER, args.getOutputModel()).toString();
+        String outputPath = args.getOutputModel().split(BASE_FOLDER)[1];
+        String outputModelPlatformPath = Paths.get(BASE_FOLDER, outputPath).toString();
         String ouputModelURIString = URI.createPlatformPluginURI(outputModelPlatformPath, true).toString();
         
         List<String> transformationArgs = List.of(inputModelURIString, ouputModelURIString);
