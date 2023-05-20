@@ -1,4 +1,4 @@
-package org.tetrabox.example.minitl.semantics.test.nogemoc
+package org.tetrabox.example.minitl.runtime
 
 import com.google.inject.Injector
 import java.nio.file.Path
