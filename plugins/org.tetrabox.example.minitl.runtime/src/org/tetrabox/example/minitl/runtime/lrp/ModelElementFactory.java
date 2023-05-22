@@ -7,6 +7,7 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.xtext.Keyword;
 import org.eclipse.xtext.RuleCall;
+import org.eclipse.xtext.TerminalRule;
 import org.eclipse.xtext.nodemodel.BidiIterator;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.INode;
@@ -51,21 +52,27 @@ public class ModelElementFactory {
         Integer endLine = null;
         Integer startColumn = null;
         Integer endColumn = null;
+        int columnOffset = 0;
 
         while (ite.hasNext() && endColumn == null) {
             INode currentNode = ite.next();
             EObject grammarElement = currentNode.getGrammarElement();
+            
+            if (grammarElement instanceof TerminalRule && ((TerminalRule) grammarElement).getName().equals("WS")) {
+            	columnOffset += 1;
+            }
 
             if (grammarElement instanceof Keyword && ((Keyword) grammarElement).getValue().equals("rule")) {
                 LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, currentNode.getTotalOffset());
                 startLine = position.getLine();
-                startColumn = position.getColumn();
+                startColumn = 1 + columnOffset;
+                columnOffset += currentNode.getLength();
             }
 
             if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("ID")) {
                 LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, currentNode.getTotalOffset());
                 endLine = position.getLine();
-                endColumn = position.getColumn() + currentNode.getLength() - 1;
+                endColumn = columnOffset + currentNode.getLength();
             }
         }
 
