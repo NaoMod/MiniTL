@@ -20,8 +20,6 @@ import org.tetrabox.example.minitl.semantics.TransformationAspect;
 import com.google.common.base.Objects;
 
 public class MiniTLRuntime {
-	
-	private final String BASE_FOLDER = "/org.tetrabox.example.minitl.examples/transfos";
 
     private Transformation transformation;
     private int nextRuleIndex;
@@ -59,17 +57,18 @@ public class MiniTLRuntime {
         String message = null;
 
         switch (type) {
-            case "minitl.ruleAppliedSingle":
+            case "ruleAppliedSingle":
             	isActivated = !activatedSingleRule.contains(elementId);
             	
             	if (isActivated) {
+            		activatedSingleRule.add(elementId);
             		Rule rule = transformation.getRules().get(nextRuleIndex);
             		message = "Rule " + rule.getName() + " is about to be applied.";
             	}
 
                 break;
 
-            case "minitl.ruleAppliedAll":
+            case "ruleAppliedAll":
                 Rule rule = transformation.getRules().get(nextRuleIndex);
                 isActivated = IDRegistry.getId(rule).equals(elementId);
 
@@ -95,14 +94,15 @@ public class MiniTLRuntime {
                 && (!Objects.equal(TransformationAspect.outputFilePath(transformation), "")))) {
             final ResourceSetImpl rs = new ResourceSetImpl();
             String _outputFilePath = TransformationAspect.outputFilePath(transformation);
+            String relativeOutputFilePath = _outputFilePath.replaceFirst("platform:/plugin", "");
             String currentPathString = new File(".").getAbsolutePath();
-            File outputFile = new File(Paths.get(Paths.get(currentPathString).getParent().getParent().toString(), BASE_FOLDER).toString() + _outputFilePath);
+            File outputFile = new File(Paths.get(Paths.get(currentPathString).getParent().getParent().toString(), relativeOutputFilePath).toString());
             boolean _exists = outputFile.exists();
             if (_exists) {
                 outputFile.delete();
             }
             outputFile.getParentFile().mkdirs();
-            final URI outputModelURI = URI.createPlatformPluginURI(outputFile.getAbsolutePath(), true);
+            final URI outputModelURI = URI.createFileURI(outputFile.getAbsolutePath());
             final Resource outputModelResource = rs.createResource(outputModelURI);
             outputModelResource.getContents().addAll(TransformationAspect.outputModel(transformation));
             outputModelResource.save(null);

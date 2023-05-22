@@ -17,12 +17,12 @@ public class BreakpointTypes {
 
         breakpointTypes = new LinkedList<>();
 
-        BreakpointParameter ruleAppliedParameter = new BreakpointParameter("targetElementType", false, "minitl.rule");
-        breakpointTypes.add(new BreakpointType("minitl.ruleAppliedSingle", "Rule Applied To Single Element",
+        BreakpointParameter ruleAppliedParameter = new BreakpointParameter("targetElementType", false, "Rule");
+        breakpointTypes.add(new BreakpointType("ruleAppliedSingle", "Rule Applied To Single Element",
                 List.of(ruleAppliedParameter),
                 "Breaks when a specific rule is about to be applied to a single element."));
 
-        breakpointTypes.add(new BreakpointType("minitl.ruleAppliedAll", "Rule Applied To All Elements",
+        breakpointTypes.add(new BreakpointType("ruleAppliedAll", "Rule Applied To All Elements",
                 List.of(ruleAppliedParameter),
                 "Breaks when a specific rule is about to be applied to a all elements."));
 
