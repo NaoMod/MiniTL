@@ -1,0 +1,27 @@
+transformation bookToPublication {
+	
+  // Ecore metamodel called "book"
+  inputMetamodel book
+	
+  // Ecore metamodel called "publication"
+  outputMetamodel publication
+	
+  rule BookToPublication {
+		
+    from book : book.Book
+		
+    to publication : publication.Publication {
+      title = book.title + ": " + book.subtitle;
+      information = "This book is " + book.nbPages + " pages long. It is written by " + book.authorName + ".";
+    }
+  }
+  
+  rule AuthorToWriter {
+		
+    from author : book.Author
+		
+    to writer : publication.Writer {
+      information = author.name + " is " + author.age + " years old and lives in " + author.city + ".";
+    }
+  }
+}

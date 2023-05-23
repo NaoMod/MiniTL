@@ -13,7 +13,7 @@ class RuntimeTest {
 	
 	static final int MAX_THREADS = 5;
 	static final String HOST_NAME = "localhost";
-	static final int port = 49152;
+	static final int PORT = 49152;
 	static final int BACKLOG = 10;
 
 	static StreamServer streamServer;
@@ -22,7 +22,7 @@ class RuntimeTest {
 	def void test() {
 		var bindAddress = InetAddress.getByName(HOST_NAME);
 		var lrpHandler = new LRPHandler();
-		var serverSocket = new ServerSocket(port, BACKLOG, bindAddress);
+		var serverSocket = new ServerSocket(PORT, BACKLOG, bindAddress);
 
 		var jsonRpcServer = new JsonRpcServer(lrpHandler, typeof(ILRPHandler));
 		jsonRpcServer.setErrorResolver(CustomAnnotationsErrorResolver.getInstance());

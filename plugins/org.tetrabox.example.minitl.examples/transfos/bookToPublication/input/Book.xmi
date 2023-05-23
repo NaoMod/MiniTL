@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:book="book">
+<book:Book
+ 	title="Flow"
+ 	subtitle="The Psychology of Optimal Experience"
+ 	nbPages="336"
+ 	authorName="Mihaly Csikszentmihalyi"/>
+ 	
+ <book:Book
+ 	title="Being You"
+ 	subtitle="A New Science of Consciousness"
+ 	nbPages="368"
+ 	authorName="Anil Seth"/>
+ 	
+<book:Author
+	name="Mihaly Csikszentmihalyi"
+	age="89"
+	city="Claremont"/>
+
+<book:Author
+	name="Anil Seth"
+	age="50"
+	city="Brighton"/>
+	
+</xmi:XMI>
