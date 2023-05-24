@@ -23,8 +23,11 @@ import org.tetrabox.example.minitl.runtime.lrp.ParseArguments;
 import org.tetrabox.example.minitl.runtime.lrp.ParseResponse;
 import org.tetrabox.example.minitl.runtime.lrp.StepArguments;
 import org.tetrabox.example.minitl.runtime.lrp.StepResponse;
+import org.tetrabox.example.minitl.semantics.TransformationAspect;
 
 import com.google.inject.Injector;
+
+import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepManagerRegistry;
 
 
 public class LRPHandler implements ILRPHandler {
@@ -32,14 +35,15 @@ public class LRPHandler implements ILRPHandler {
 
 	private final String BASE_FOLDER = "/org.tetrabox.example.minitl.examples/transfos";
 	
-    private Map<String, Transformation> asts;
-    private Map<String, MiniTLRuntime> runtimes;
+    private Map<String, Transformation> transformations;
+    private MiniTLStepManager stepManager;
     
     public LRPHandler() {
-        asts = new HashMap<>();
-        runtimes = new HashMap<>();
-        
+        transformations = new HashMap<>();
         injector = new MinitlStandaloneSetup().createInjectorAndDoEMFRegistration();
+        
+        stepManager = new MiniTLStepManager();
+        StepManagerRegistry.getInstance().registerManager(stepManager);
     }
 
     @Override
@@ -66,7 +70,7 @@ public class LRPHandler implements ILRPHandler {
 		}
         
         Transformation transformation = (Transformation) transfoResource.getContents().get(0);
-        asts.put(args.getSourceFile(), transformation);
+        transformations.put(args.getSourceFile(), transformation);
 
         return new ParseResponse(ModelElementFactory.fromTransformation(transformation));
     }
@@ -78,7 +82,7 @@ public class LRPHandler implements ILRPHandler {
 
     @Override
     public InitResponse initExecution(CustomInitArguments args) throws Exception {
-        if (!asts.containsKey(args.getSourceFile()))
+        if (!transformations.containsKey(args.getSourceFile()))
             throw new Exception("No AST for file \'" + args.getSourceFile() + "\'.");
         
         String inputPath = args.getInputModel().split(BASE_FOLDER)[1];
@@ -90,38 +94,40 @@ public class LRPHandler implements ILRPHandler {
         String ouputModelURIString = URI.createPlatformPluginURI(outputModelPlatformPath, true).toString();
         
         List<String> transformationArgs = List.of(inputModelURIString, ouputModelURIString);
-        MiniTLRuntime runtime = new MiniTLRuntime(asts.get(args.getSourceFile()), transformationArgs);
-        runtimes.put(args.getSourceFile(), runtime);
+        Transformation transformation = transformations.get(args.getSourceFile());
+        TransformationAspect.initialize(transformation, transformationArgs);
+        stepManager.addTransformation(transformation);
 
-        return new InitResponse(runtime.isExecutionDone());
+        return new InitResponse(stepManager.isExecutionDone(transformation, true));
     }
 
     @Override
     public StepResponse nextStep(StepArguments args) throws Exception {
         checkRuntimeExists(args.getSourceFile());
 
-        MiniTLRuntime runtime = runtimes.get(args.getSourceFile());
-        runtime.nextStep();
+        stepManager.nextStep(transformations.get(args.getSourceFile()));
 
-        return new StepResponse(runtime.isExecutionDone());
+        return new StepResponse(stepManager.isExecutionDone(transformations.get(args.getSourceFile()), false));
     }
 
     @Override
     public GetRuntimeStateResponse getRuntimeState(GetRuntimeStateArguments args) throws Exception {
         checkRuntimeExists(args.getSourceFile());
+        Transformation transformation = transformations.get(args.getSourceFile());
 
-        return new GetRuntimeStateResponse(ModelElementFactory.fromMiniTLRuntime(runtimes.get(args.getSourceFile())));
+        return new GetRuntimeStateResponse(ModelElementFactory.fromMiniTLRuntime(stepManager.getRuntime(transformation)));
     }
 
     @Override
     public CheckBreakpointResponse checkBreakpoint(CheckBreakpointArguments args) throws Exception {
         checkRuntimeExists(args.getSourceFile());
 
-        return runtimes.get(args.getSourceFile()).checkBreakpoint(args.getTypeId(), args.getElementId());
+        return stepManager.checkBreakpoint(transformations.get(args.getSourceFile()), args.getTypeId(), args.getElementId());
     }
 
     private void checkRuntimeExists(String sourceFile) throws Exception {
-        if (!runtimes.containsKey(sourceFile))
+    	Transformation transformation = transformations.get(sourceFile);
+        if (stepManager.getRuntime(transformation) == null)
             throw new Exception("No runtime for file \'" + sourceFile + "\'.");
     }
 }

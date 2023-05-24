@@ -1,26 +1,87 @@
 package org.tetrabox.example.minitl.runtime;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.tetrabox.example.minitl.Rule;
 import org.tetrabox.example.minitl.Transformation;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
-import org.tetrabox.example.minitl.semantics.RuleAspect;
-import org.tetrabox.example.minitl.semantics.TransformationAspect;
 
-import com.google.common.base.Objects;
+import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
 
 public class MiniTLRuntime {
+	
+	private Transformation transformation;
+	private StepCommand suspendedCommand;
+	private Set<String> activatedSingleRule;
+	
+	private Rule nextRule;
+	
+	public MiniTLRuntime(Transformation transformation) {
+		this.transformation = transformation;
+		activatedSingleRule = new HashSet<>();
+	}
 
+	public StepCommand getSuspendedCommand() {
+		return suspendedCommand;
+	}
+
+	public void setSuspendedCommand(StepCommand suspendedCommand) {
+		this.suspendedCommand = suspendedCommand;
+	}
+	
+	public Transformation getTransformation() {
+		return transformation;
+	}
+
+	public Rule getNextRule() {
+		return nextRule;
+	}
+
+	public void setNextRule(Rule nextRule) {
+		if (this.nextRule == nextRule) activatedSingleRule.add(null);
+		this.nextRule = nextRule;
+	}
+
+	public boolean isExecutionDone() {
+		return suspendedCommand == null;
+	}
+	
+	public CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws Exception {
+        if (isExecutionDone())
+            return new CheckBreakpointResponse(false);
+
+        boolean isActivated = false;
+        String message = null;
+
+        switch (type) {
+            case "ruleAppliedSingle":
+            	isActivated = IDRegistry.getId(nextRule).equals(elementId);
+            	
+            	if (isActivated) {
+            		message = "Rule " + nextRule.getName() + " is about to be applied to a single element.";
+            	}
+
+                break;
+
+            case "ruleAppliedAll":
+                isActivated = IDRegistry.getId(nextRule).equals(elementId) && !activatedSingleRule.contains(elementId);
+
+                if (isActivated) message = "Rule " + nextRule.getName() + " is about to be applied to all elements.";
+
+                break;
+
+            default:
+                throw new Exception("Unknown breakpoint type " + type + ".");
+        }
+
+        return new CheckBreakpointResponse(isActivated, message);
+    }
+	
+	
+	
+	/*
     private Transformation transformation;
     private int nextRuleIndex;
     private Set<String> activatedSingleRule;
@@ -108,4 +169,5 @@ public class MiniTLRuntime {
             outputModelResource.save(null);
         }
     }
+    */
 }

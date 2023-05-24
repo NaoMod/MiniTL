@@ -161,8 +161,6 @@ public class ModelElementFactory {
 
         element.getAttributes().put("feature", Either.forLeft(value.getFeature().getName()));
 
-        element.getChildren().put("object", Either.forLeft(fromValue(value.getObject())));
-
         return element;
     }
 

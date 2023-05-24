@@ -8,6 +8,8 @@ public class IDRegistry {
     private static Map<Object, String> ids = new HashMap<>();
 
     public static String getId(Object object) {
+    	if (object == null) return null;
+    	
         if (!ids.containsKey(object))
             ids.put(object, UUID.randomUUID().toString());
 

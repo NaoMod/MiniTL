@@ -12,7 +12,8 @@ Require-Bundle: org.eclipse.emf.ecore,
  org.tetrabox.example.minitl.semantics;bundle-version="1.0.0",
  org.tetrabox.example.minitl;bundle-version="1.0.0",
  org.eclipse.xtext;bundle-version="2.27.0",
- org.eclipse.core.resources;bundle-version="3.17.0"
+ org.eclipse.core.resources;bundle-version="3.17.0",
+ fr.inria.diverse.k3.al.annotationprocessor.plugin;bundle-version="4.0.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Bundle-Vendor: TU Wien
 Bundle-ClassPath: .,
