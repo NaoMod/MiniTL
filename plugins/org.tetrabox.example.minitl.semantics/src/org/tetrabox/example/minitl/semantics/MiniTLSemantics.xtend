@@ -29,6 +29,7 @@ import static extension org.tetrabox.example.minitl.semantics.ObjectTemplateAspe
 import static extension org.tetrabox.example.minitl.semantics.RuleAspect.*
 import static extension org.tetrabox.example.minitl.semantics.TransformationAspect.*
 import static extension org.tetrabox.example.minitl.semantics.ValueAspect.*
+import java.nio.file.Paths
 
 @Aspect(className=Transformation)
 class TransformationAspect {
@@ -83,10 +84,18 @@ class TransformationAspect {
 			r.apply()
 		}
 
+		_self.save()
+	}
+	
+	@Step
+	def void save() {
 		// Saving output model
 		if (_self.outputFilePath !== null && _self.outputFilePath != "") {
 			val rs = new ResourceSetImpl
-			val File outputFile = new File(_self.outputFilePath)
+			val String outputFilePath = _self.outputFilePath
+			val String relativeOutputFilePath = outputFilePath.replaceFirst("platform:/plugin", "")
+            val String currentPathString = new File(".").getAbsolutePath()
+            val File outputFile = new File(Paths.get(Paths.get(currentPathString).getParent().getParent().toString(), relativeOutputFilePath).toString())
 			if (outputFile.exists)
 				outputFile.delete
 			outputFile.parentFile.mkdirs

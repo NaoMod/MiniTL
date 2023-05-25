@@ -1,7 +1,7 @@
 package org.tetrabox.example.minitl.runtime;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 import org.tetrabox.example.minitl.Rule;
 import org.tetrabox.example.minitl.Transformation;
@@ -10,25 +10,22 @@ import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
 
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
 
+/**
+ * Manages the execution of steps for MiniTL programs.
+ */
 public class MiniTLRuntime {
 	
 	private Transformation transformation;
-	private StepCommand suspendedCommand;
-	private Set<String> activatedSingleRule;
-	
-	private Rule nextRule;
+	private Queue<RuleCommand> ruleCommands;
+	private StepCommand saveCommand;
 	
 	public MiniTLRuntime(Transformation transformation) {
 		this.transformation = transformation;
-		activatedSingleRule = new HashSet<>();
+		ruleCommands = new ArrayDeque<>();
 	}
 
-	public StepCommand getSuspendedCommand() {
-		return suspendedCommand;
-	}
-
-	public void setSuspendedCommand(StepCommand suspendedCommand) {
-		this.suspendedCommand = suspendedCommand;
+	public void addRuleCommand(Rule rule, StepCommand command) {
+		ruleCommands.add(new RuleCommand(rule, command));
 	}
 	
 	public Transformation getTransformation() {
@@ -36,16 +33,20 @@ public class MiniTLRuntime {
 	}
 
 	public Rule getNextRule() {
-		return nextRule;
-	}
-
-	public void setNextRule(Rule nextRule) {
-		if (this.nextRule == nextRule) activatedSingleRule.add(null);
-		this.nextRule = nextRule;
+		if (ruleCommands.isEmpty()) return null;
+		
+		return ruleCommands.peek().getRule();
 	}
 
 	public boolean isExecutionDone() {
-		return suspendedCommand == null;
+		return ruleCommands.isEmpty();
+	}
+	
+	public void nextStep() {
+		if (ruleCommands.isEmpty()) return;
+		
+		RuleCommand ruleCommand = ruleCommands.poll();
+		ruleCommand.getCommand().execute();
 	}
 	
 	public CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws Exception {
@@ -54,6 +55,8 @@ public class MiniTLRuntime {
 
         boolean isActivated = false;
         String message = null;
+        
+        Rule nextRule = ruleCommands.peek().getRule();
 
         switch (type) {
             case "ruleAppliedSingle":
@@ -66,7 +69,8 @@ public class MiniTLRuntime {
                 break;
 
             case "ruleAppliedAll":
-                isActivated = IDRegistry.getId(nextRule).equals(elementId) && !activatedSingleRule.contains(elementId);
+            	//TODO
+                isActivated = IDRegistry.getId(nextRule).equals(elementId);
 
                 if (isActivated) message = "Rule " + nextRule.getName() + " is about to be applied to all elements.";
 
@@ -79,95 +83,30 @@ public class MiniTLRuntime {
         return new CheckBreakpointResponse(isActivated, message);
     }
 	
+	public void checkSave() {
+		if (ruleCommands.isEmpty())
+			saveCommand.execute();
+	}
 	
+	public void setSaveCommand(StepCommand command) {
+		saveCommand = command;
+	}
 	
-	/*
-    private Transformation transformation;
-    private int nextRuleIndex;
-    private Set<String> activatedSingleRule;
+	private class RuleCommand {
+		private Rule rule;
+		private StepCommand command;
+		
+		public RuleCommand(Rule rule, StepCommand command) {
+			this.rule = rule;
+			this.command = command;
+		}
 
-    public MiniTLRuntime(Transformation transformation, List<String> args) {
-        TransformationAspect.initialize(transformation, args);
-        this.transformation = transformation;
-        nextRuleIndex = 0;
-        activatedSingleRule = new HashSet<>();
-    }
+		public Rule getRule() {
+			return rule;
+		}
 
-    public boolean isExecutionDone() {
-        return nextRuleIndex == transformation.getRules().size();
-    }
-
-    public void nextStep() throws Exception {
-        if (isExecutionDone())
-            throw new Exception("Execution already done.");
-
-        Rule rule = transformation.getRules().get(nextRuleIndex);
-        RuleAspect.apply(rule);
-
-        nextRuleIndex++;
-
-        if (nextRuleIndex == transformation.getRules().size())
-            doSave();
-    }
-
-    public CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws Exception {
-        if (isExecutionDone())
-            return new CheckBreakpointResponse(false);
-
-        boolean isActivated = false;
-        String message = null;
-
-        switch (type) {
-            case "ruleAppliedSingle":
-            	isActivated = !activatedSingleRule.contains(elementId);
-            	
-            	if (isActivated) {
-            		activatedSingleRule.add(elementId);
-            		Rule rule = transformation.getRules().get(nextRuleIndex);
-            		message = "Rule " + rule.getName() + " is about to be applied.";
-            	}
-
-                break;
-
-            case "ruleAppliedAll":
-                Rule rule = transformation.getRules().get(nextRuleIndex);
-                isActivated = IDRegistry.getId(rule).equals(elementId);
-
-                if (isActivated) message = "Rule " + rule.getName() + " is about to be applied.";
-
-                break;
-
-            default:
-                throw new Exception("Unknown breakpoint type " + type + ".");
-        }
-
-        return new CheckBreakpointResponse(isActivated, message);
-    }
-    
-    public Rule getNextRule() {
-    	if (isExecutionDone()) return null;
-    	
-    	return transformation.getRules().get(nextRuleIndex);
-    }
-
-    private void doSave() throws IOException {
-        if (((!Objects.equal(TransformationAspect.outputFilePath(transformation), null))
-                && (!Objects.equal(TransformationAspect.outputFilePath(transformation), "")))) {
-            final ResourceSetImpl rs = new ResourceSetImpl();
-            String _outputFilePath = TransformationAspect.outputFilePath(transformation);
-            String relativeOutputFilePath = _outputFilePath.replaceFirst("platform:/plugin", "");
-            String currentPathString = new File(".").getAbsolutePath();
-            File outputFile = new File(Paths.get(Paths.get(currentPathString).getParent().getParent().toString(), relativeOutputFilePath).toString());
-            boolean _exists = outputFile.exists();
-            if (_exists) {
-                outputFile.delete();
-            }
-            outputFile.getParentFile().mkdirs();
-            final URI outputModelURI = URI.createFileURI(outputFile.getAbsolutePath());
-            final Resource outputModelResource = rs.createResource(outputModelURI);
-            outputModelResource.getContents().addAll(TransformationAspect.outputModel(transformation));
-            outputModelResource.save(null);
-        }
-    }
-    */
+		public StepCommand getCommand() {
+			return command;
+		}		
+	}
 }

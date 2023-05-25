@@ -98,7 +98,7 @@ public class LRPHandler implements ILRPHandler {
         TransformationAspect.initialize(transformation, transformationArgs);
         stepManager.addTransformation(transformation);
 
-        return new InitResponse(stepManager.isExecutionDone(transformation, true));
+        return new InitResponse(stepManager.isExecutionDone(transformation));
     }
 
     @Override
@@ -107,7 +107,7 @@ public class LRPHandler implements ILRPHandler {
 
         stepManager.nextStep(transformations.get(args.getSourceFile()));
 
-        return new StepResponse(stepManager.isExecutionDone(transformations.get(args.getSourceFile()), false));
+        return new StepResponse(stepManager.isExecutionDone(transformations.get(args.getSourceFile())));
     }
 
     @Override
