@@ -1,78 +1,78 @@
 package org.tetrabox.example.minitl.runtime;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import org.eclipse.emf.ecore.EObject;
+import org.tetrabox.example.minitl.Binding;
 import org.tetrabox.example.minitl.Rule;
 import org.tetrabox.example.minitl.Transformation;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
+import org.tetrabox.example.minitl.semantics.TransformationAspect;
 
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
 
 /**
  * Manages the execution of steps for MiniTL programs.
  */
-public class MiniTLRuntime {
+public class MiniTLRuntime implements Runnable {
 	
 	private Transformation transformation;
-	private Queue<RuleCommand> ruleCommands;
-	private StepCommand saveCommand;
+	private List<String> transformationArgs;
 	
-	public MiniTLRuntime(Transformation transformation) {
+	private Binding nextBinding;
+	private Set<Rule> appliedRules;
+	
+	public MiniTLRuntime(Transformation transformation, List<String> transformationArgs) {
 		this.transformation = transformation;
-		ruleCommands = new ArrayDeque<>();
-	}
-
-	public void addRuleCommand(Rule rule, StepCommand command) {
-		ruleCommands.add(new RuleCommand(rule, command));
+		this.transformationArgs = transformationArgs;
+		appliedRules = new HashSet<>();
 	}
 	
-	public Transformation getTransformation() {
-		return transformation;
+	@Override
+	public synchronized void run() {
+		TransformationAspect.initialize(transformation, transformationArgs);
+		TransformationAspect.execute(transformation);
 	}
 
-	public Rule getNextRule() {
-		if (ruleCommands.isEmpty()) return null;
+	public synchronized void executeStep(Object caller, StepCommand command, String className, String methodName) throws InterruptedException {
+		if (className.equals("Binding") && methodName.equals("assign")) {
+			nextBinding = (Binding) caller;
+			notify();
+			wait();
+			
+			appliedRules.add(findContainingRule(nextBinding));
+			nextBinding = null;
+		}
 		
-		return ruleCommands.peek().getRule();
-	}
-
-	public boolean isExecutionDone() {
-		return ruleCommands.isEmpty();
+		command.execute();
 	}
 	
-	public void nextStep() {
-		if (ruleCommands.isEmpty()) return;
-		
-		RuleCommand ruleCommand = ruleCommands.poll();
-		ruleCommand.getCommand().execute();
-	}
-	
-	public CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws Exception {
+	public synchronized CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws Exception {
         if (isExecutionDone())
             return new CheckBreakpointResponse(false);
 
         boolean isActivated = false;
         String message = null;
         
-        Rule nextRule = ruleCommands.peek().getRule();
-
         switch (type) {
-            case "ruleAppliedSingle":
-            	isActivated = IDRegistry.getId(nextRule).equals(elementId);
+            case "ruleApplied":
+            	Rule rule = findContainingRule(getNextBinding());
+            	isActivated = !appliedRules.contains(rule) && IDRegistry.getId(rule).equals(elementId);
             	
             	if (isActivated) {
-            		message = "Rule " + nextRule.getName() + " is about to be applied to a single element.";
+            		message = "Rule " + rule.getName() + " is about to be applied.";
             	}
 
                 break;
 
-            case "ruleAppliedAll":
-            	//TODO
-                isActivated = IDRegistry.getId(nextRule).equals(elementId);
+            case "bindingAssigned":
+            	Binding nextBinding = getNextBinding();
+                isActivated = IDRegistry.getId(nextBinding).equals(elementId);
 
-                if (isActivated) message = "Rule " + nextRule.getName() + " is about to be applied to all elements.";
+                if (isActivated) message = "Binding " + nextBinding.getFeature() + " is about to be assigned the value " + nextBinding.getValue() + ".";
 
                 break;
 
@@ -83,30 +83,30 @@ public class MiniTLRuntime {
         return new CheckBreakpointResponse(isActivated, message);
     }
 	
-	public void checkSave() {
-		if (ruleCommands.isEmpty())
-			saveCommand.execute();
-	}
-	
-	public void setSaveCommand(StepCommand command) {
-		saveCommand = command;
-	}
-	
-	private class RuleCommand {
-		private Rule rule;
-		private StepCommand command;
+	public synchronized Rule getNextRule() {
+		if (nextBinding == null) return null;
 		
-		public RuleCommand(Rule rule, StepCommand command) {
-			this.rule = rule;
-			this.command = command;
-		}
-
-		public Rule getRule() {
-			return rule;
-		}
-
-		public StepCommand getCommand() {
-			return command;
-		}		
+		return findContainingRule(nextBinding);
+	}
+	
+	public synchronized Binding getNextBinding() {
+		return nextBinding;
+	}
+	
+	public synchronized boolean isExecutionDone() {
+		return nextBinding == null;
+	}
+	
+	private Rule findContainingRule(EObject object) {
+		Rule rule = null;
+        EObject currentAncestor = getNextBinding().eContainer();
+        
+        // find containing rule
+        while (rule == null) {
+        	if (currentAncestor instanceof Rule) rule = (Rule) currentAncestor;
+        	currentAncestor = currentAncestor.eContainer();
+        }
+        
+        return rule;
 	}
 }

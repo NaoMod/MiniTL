@@ -25,7 +25,8 @@ import org.tetrabox.example.minitl.Transformation;
 import org.tetrabox.example.minitl.Value;
 import org.tetrabox.example.minitl.runtime.MiniTLRuntime;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
-
+import org.tetrabox.example.minitl.semantics.ValueAspect;
+	
 public class ModelElementFactory {
 
     public static ModelElement fromTransformation(Transformation transformation) throws Exception {
@@ -202,7 +203,12 @@ public class ModelElementFactory {
     public static ModelElement fromMiniTLRuntime(MiniTLRuntime runtime) {
         ModelElement element = new ModelElement(IDRegistry.getId(runtime), "Runtime");
         
-        element.getRefs().put("nextRule", Either.forLeft(IDRegistry.getId(runtime.getNextRule())));
+        Binding nextBinding = runtime.getNextBinding();
+        Object value = ValueAspect.evaluate(runtime.getNextBinding().getValue());
+        
+        element.getRefs().put("currentRule", Either.forLeft(IDRegistry.getId(runtime.getNextRule())));
+        element.getRefs().put("nextBinding", Either.forLeft(IDRegistry.getId(nextBinding)));
+        element.getAttributes().put("featureValue", Either.forLeft(value));
 
         return element;
     }

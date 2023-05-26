@@ -6,6 +6,7 @@ import fr.inria.diverse.k3.al.annotationprocessor.Main
 import fr.inria.diverse.k3.al.annotationprocessor.OverrideAspectMethod
 import fr.inria.diverse.k3.al.annotationprocessor.Step
 import java.io.File
+import java.nio.file.Paths
 import java.util.List
 import org.eclipse.emf.common.util.URI
 import org.eclipse.emf.common.util.UniqueEList
@@ -29,7 +30,6 @@ import static extension org.tetrabox.example.minitl.semantics.ObjectTemplateAspe
 import static extension org.tetrabox.example.minitl.semantics.RuleAspect.*
 import static extension org.tetrabox.example.minitl.semantics.TransformationAspect.*
 import static extension org.tetrabox.example.minitl.semantics.ValueAspect.*
-import java.nio.file.Paths
 
 @Aspect(className=Transformation)
 class TransformationAspect {
@@ -84,11 +84,6 @@ class TransformationAspect {
 			r.apply()
 		}
 
-		_self.save()
-	}
-	
-	@Step
-	def void save() {
 		// Saving output model
 		if (_self.outputFilePath !== null && _self.outputFilePath != "") {
 			val rs = new ResourceSetImpl

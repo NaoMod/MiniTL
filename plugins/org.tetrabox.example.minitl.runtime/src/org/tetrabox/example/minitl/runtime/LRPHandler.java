@@ -23,7 +23,6 @@ import org.tetrabox.example.minitl.runtime.lrp.ParseArguments;
 import org.tetrabox.example.minitl.runtime.lrp.ParseResponse;
 import org.tetrabox.example.minitl.runtime.lrp.StepArguments;
 import org.tetrabox.example.minitl.runtime.lrp.StepResponse;
-import org.tetrabox.example.minitl.semantics.TransformationAspect;
 
 import com.google.inject.Injector;
 
@@ -36,11 +35,14 @@ public class LRPHandler implements ILRPHandler {
 	private final String BASE_FOLDER = "/org.tetrabox.example.minitl.examples/transfos";
 	
     private Map<String, Transformation> transformations;
+    private Map<String, MiniTLRuntime> runtimes;
     private MiniTLStepManager stepManager;
     
     public LRPHandler() {
         transformations = new HashMap<>();
         injector = new MinitlStandaloneSetup().createInjectorAndDoEMFRegistration();
+        
+        runtimes = new HashMap<>();
         
         stepManager = new MiniTLStepManager();
         StepManagerRegistry.getInstance().registerManager(stepManager);
@@ -95,39 +97,54 @@ public class LRPHandler implements ILRPHandler {
         
         List<String> transformationArgs = List.of(inputModelURIString, ouputModelURIString);
         Transformation transformation = transformations.get(args.getSourceFile());
-        TransformationAspect.initialize(transformation, transformationArgs);
-        stepManager.addTransformation(transformation);
+        
+        MiniTLRuntime runtime = new MiniTLRuntime(transformation, transformationArgs);
+        stepManager.addRuntime(transformation, runtime);
+		
+        synchronized (runtime) {
+        	new Thread(runtime).start();
+        	runtime.wait();
+		}
+		
+		if (!runtime.isExecutionDone())
+			runtimes.put(args.getSourceFile(), runtime);
 
-        return new InitResponse(stepManager.isExecutionDone(transformation));
+        return new InitResponse(runtime.isExecutionDone());
     }
 
     @Override
     public StepResponse nextStep(StepArguments args) throws Exception {
         checkRuntimeExists(args.getSourceFile());
 
-        stepManager.nextStep(transformations.get(args.getSourceFile()));
-
-        return new StepResponse(stepManager.isExecutionDone(transformations.get(args.getSourceFile())));
+        MiniTLRuntime runtime = runtimes.get(args.getSourceFile());
+        synchronized (runtime) {
+        	runtime.notify();
+        	runtime.wait();
+		}
+        
+        if (runtime.isExecutionDone()) {
+        	runtimes.remove(args.getSourceFile());
+        }
+        
+        return new StepResponse(runtime.isExecutionDone());
     }
 
     @Override
     public GetRuntimeStateResponse getRuntimeState(GetRuntimeStateArguments args) throws Exception {
         checkRuntimeExists(args.getSourceFile());
-        Transformation transformation = transformations.get(args.getSourceFile());
 
-        return new GetRuntimeStateResponse(ModelElementFactory.fromMiniTLRuntime(stepManager.getRuntime(transformation)));
+        return new GetRuntimeStateResponse(ModelElementFactory.fromMiniTLRuntime(runtimes.get(args.getSourceFile())));
     }
 
     @Override
     public CheckBreakpointResponse checkBreakpoint(CheckBreakpointArguments args) throws Exception {
         checkRuntimeExists(args.getSourceFile());
 
-        return stepManager.checkBreakpoint(transformations.get(args.getSourceFile()), args.getTypeId(), args.getElementId());
+        return runtimes.get(args.getSourceFile()).checkBreakpoint(args.getTypeId(), args.getElementId());
     }
 
     private void checkRuntimeExists(String sourceFile) throws Exception {
-    	Transformation transformation = transformations.get(sourceFile);
-        if (stepManager.getRuntime(transformation) == null)
+        if (!runtimes.containsKey(sourceFile))
             throw new Exception("No runtime for file \'" + sourceFile + "\'.");
     }
 }

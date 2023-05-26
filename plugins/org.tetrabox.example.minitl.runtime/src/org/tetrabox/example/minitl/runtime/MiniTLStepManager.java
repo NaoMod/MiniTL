@@ -5,10 +5,7 @@ import java.util.Map;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
-import org.tetrabox.example.minitl.Rule;
 import org.tetrabox.example.minitl.Transformation;
-import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
-import org.tetrabox.example.minitl.semantics.TransformationAspect;
 
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.IStepManager;
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
@@ -26,18 +23,12 @@ public class MiniTLStepManager implements IStepManager {
 
 	@Override
 	public void executeStep(Object caller, StepCommand command, String className, String methodName) {
-		if (className.equals("Transformation") && methodName.equals("save")) {
-			runtimes.get((Transformation) caller).setSaveCommand(command);
-			return;
-		}
-			
-		if (className.equals("Rule")) {
-			Rule rule = (Rule) caller;
-			runtimes.get((Transformation) EcoreUtil.getRootContainer(rule)).addRuleCommand(rule, command);
-			return;
-		}
-		
-		command.execute();
+		try {
+			runtimes.get((Transformation) EcoreUtil.getRootContainer((EObject) caller)).executeStep(caller, command, className, methodName);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
 	}
 
 	@Override
@@ -45,29 +36,11 @@ public class MiniTLStepManager implements IStepManager {
 		return true;
 	}
 	
-	public boolean isExecutionDone(Transformation transformation) {
-		return runtimes.get(transformation).isExecutionDone();
-	}
-	
-	public void nextStep(Transformation transformation) {
-		MiniTLRuntime runtime = runtimes.get(transformation);
-		runtime.nextStep();
-		runtime.checkSave();
-	}
-	
-	public void addTransformation(Transformation transformation) {
-		MiniTLRuntime runtime =  new MiniTLRuntime(transformation);
+	public void addRuntime(Transformation transformation, MiniTLRuntime runtime) {
 		runtimes.put(transformation, runtime);
-		
-		TransformationAspect.execute(transformation);
-		runtime.checkSave();
 	}
 	
-	public MiniTLRuntime getRuntime(Transformation transformation) {
-		return runtimes.get(transformation);
+	public void stepManagerRemoveRuntime(Transformation transformation) {
+		runtimes.remove(transformation);
 	}
-	
-	public CheckBreakpointResponse checkBreakpoint(Transformation transformation, String type, String elementId) throws Exception {
-        return runtimes.get(transformation).checkBreakpoint(type, elementId);
-    }
 }
