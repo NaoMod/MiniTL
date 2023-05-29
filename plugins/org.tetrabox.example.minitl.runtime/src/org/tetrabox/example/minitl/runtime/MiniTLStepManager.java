@@ -23,12 +23,15 @@ public class MiniTLStepManager implements IStepManager {
 
 	@Override
 	public void executeStep(Object caller, StepCommand command, String className, String methodName) {
+		MiniTLRuntime runtime = runtimes.get((Transformation) EcoreUtil.getRootContainer((EObject) caller));
 		try {
-			runtimes.get((Transformation) EcoreUtil.getRootContainer((EObject) caller)).executeStep(caller, command, className, methodName);
+			runtime.executeStep(caller, command, className, methodName);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}	
+		}
+		
+		if (runtime.isExecutionDone()) runtime.notify();
 	}
 
 	@Override

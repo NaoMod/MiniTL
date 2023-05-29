@@ -106,8 +106,7 @@ public class LRPHandler implements ILRPHandler {
         	runtime.wait();
 		}
 		
-		if (!runtime.isExecutionDone())
-			runtimes.put(args.getSourceFile(), runtime);
+		runtimes.put(args.getSourceFile(), runtime);
 
         return new InitResponse(runtime.isExecutionDone());
     }
@@ -121,10 +120,6 @@ public class LRPHandler implements ILRPHandler {
         	runtime.notify();
         	runtime.wait();
 		}
-        
-        if (runtime.isExecutionDone()) {
-        	runtimes.remove(args.getSourceFile());
-        }
         
         return new StepResponse(runtime.isExecutionDone());
     }
