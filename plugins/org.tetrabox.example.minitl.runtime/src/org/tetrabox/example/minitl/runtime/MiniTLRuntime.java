@@ -11,6 +11,7 @@ import org.tetrabox.example.minitl.Transformation;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
 import org.tetrabox.example.minitl.semantics.TransformationAspect;
+import org.tetrabox.example.minitl.semantics.ValueAspect;
 
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
 
@@ -68,18 +69,18 @@ public class MiniTLRuntime implements Runnable {
 
                 break;
 
-            case "bindingAssigned":
+            case "featureAssignedValue":
             	Binding nextBinding = getNextBinding();
                 isActivated = IDRegistry.getId(nextBinding).equals(elementId);
 
-                if (isActivated) message = "Binding " + nextBinding.getFeature() + " is about to be assigned the value " + nextBinding.getValue() + ".";
+                if (isActivated) message = "Feature '" + nextBinding.getFeature().getName() + "' is about to be assigned a value.";
 
                 break;
 
             default:
                 throw new Exception("Unknown breakpoint type " + type + ".");
         }
-
+	
         return new CheckBreakpointResponse(isActivated, message);
     }
 	
