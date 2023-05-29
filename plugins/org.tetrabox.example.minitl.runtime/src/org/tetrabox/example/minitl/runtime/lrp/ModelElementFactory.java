@@ -230,7 +230,7 @@ public class ModelElementFactory {
     public static ModelElement fromMiniTLRuntime(MiniTLRuntime runtime) {
         ModelElement element = new ModelElement(IDRegistry.getId(runtime), "Runtime");
         Binding nextBinding = runtime.getNextBinding();
-        Object value = ValueAspect.evaluate(runtime.getNextBinding().getValue());
+        Object value = nextBinding == null ? null : ValueAspect.evaluate(runtime.getNextBinding().getValue());
         
         element.getAttributes().put("featureValue", Either.forLeft(value));
         
@@ -244,8 +244,11 @@ public class ModelElementFactory {
 			outputModel.add(fromEObject(modelElement));
 		}
         
+        EObject currentObject = nextBinding == null ? null : ObjectTemplateAspect.currentObject((ObjectTemplate) nextBinding.eContainer());
+        
         element.getChildren().put("inputModel", Either.forRight(inputModel));
         element.getChildren().put("outputModel", Either.forRight(outputModel));
+        element.getChildren().put("currentObject", Either.forLeft(fromEObject(currentObject)));
         
         element.getRefs().put("currentRule", Either.forLeft(IDRegistry.getId(runtime.getNextRule())));
         element.getRefs().put("nextBinding", Either.forLeft(IDRegistry.getId(nextBinding)));
@@ -254,6 +257,8 @@ public class ModelElementFactory {
     }
     
     public static ModelElement fromEObject(EObject eobject) {
+    	if (eobject == null) return null;
+    	
     	ModelElement element = new ModelElement(IDRegistry.getId(eobject), "EObject");
     	
     	for (EStructuralFeature feature : eobject.eClass().getEStructuralFeatures()) {
