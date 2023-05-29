@@ -5,13 +5,15 @@ import java.util.List;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.xtext.CrossReference;
 import org.eclipse.xtext.Keyword;
 import org.eclipse.xtext.RuleCall;
-import org.eclipse.xtext.TerminalRule;
 import org.eclipse.xtext.nodemodel.BidiIterator;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
+import org.eclipse.xtext.util.ITextRegionWithLineInformation;
 import org.eclipse.xtext.util.LineAndColumn;
 import org.tetrabox.example.minitl.BinaryExpression;
 import org.tetrabox.example.minitl.Binding;
@@ -25,6 +27,8 @@ import org.tetrabox.example.minitl.Transformation;
 import org.tetrabox.example.minitl.Value;
 import org.tetrabox.example.minitl.runtime.MiniTLRuntime;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
+import org.tetrabox.example.minitl.semantics.ObjectTemplateAspect;
+import org.tetrabox.example.minitl.semantics.TransformationAspect;
 import org.tetrabox.example.minitl.semantics.ValueAspect;
 	
 public class ModelElementFactory {
@@ -53,27 +57,24 @@ public class ModelElementFactory {
         Integer endLine = null;
         Integer startColumn = null;
         Integer endColumn = null;
-        int columnOffset = 0;
-
+        
         while (ite.hasNext() && endColumn == null) {
             INode currentNode = ite.next();
             EObject grammarElement = currentNode.getGrammarElement();
-            
-            if (grammarElement instanceof TerminalRule && ((TerminalRule) grammarElement).getName().equals("WS")) {
-            	columnOffset += 1;
-            }
 
             if (grammarElement instanceof Keyword && ((Keyword) grammarElement).getValue().equals("rule")) {
-                LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, currentNode.getTotalOffset());
+            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
+            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset());
                 startLine = position.getLine();
-                startColumn = 1 + columnOffset;
-                columnOffset += currentNode.getLength();
+                startColumn = position.getColumn();
+                continue;
             }
 
             if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("ID")) {
-                LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, currentNode.getTotalOffset());
+            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
+            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset() + nodeRegion.getLength());
                 endLine = position.getLine();
-                endColumn = columnOffset + currentNode.getLength();
+                endColumn = position.getColumn() - 1;
             }
         }
 
@@ -106,20 +107,46 @@ public class ModelElementFactory {
         }
         element.getChildren().put("bindings", Either.forRight(bindingModelElements));
 
-        /*
-        String typeId = IDRegistry.getId(objectTemplate.getType());
-        element.getRefs().put("type", Either.forLeft(typeId));
-        */
-
         return element;
     }
 
     public static ModelElement fromBinding(Binding binding) throws Exception {
-        ModelElement element = new ModelElement(IDRegistry.getId(binding), binding.eClass().getName());
+    	ICompositeNode bindingNode = NodeModelUtils.getNode(binding);
+        BidiIterator<INode> ite = bindingNode.getChildren().iterator();
+        Integer startLine = null;
+        Integer endLine = null;
+        Integer startColumn = null;
+        Integer endColumn = null;
+        
+        while (ite.hasNext() && endColumn == null) {
+            INode currentNode = ite.next();
+            EObject grammarElement = currentNode.getGrammarElement();
+            
+            if (grammarElement instanceof CrossReference) {
+            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
+            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset());
+                startLine = position.getLine();
+                startColumn = position.getColumn();
+                continue;
+            }
 
-        // TODO: add feature as child or ref
+            if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("Value")) {
+            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
+            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset() + nodeRegion.getLength());
+                endLine = position.getLine();
+                endColumn = position.getColumn() - 1;
+                continue;
+            }
+        }
+        
+        if (endColumn == null)
+            throw new Exception("Couldn't process position of binding " + binding.getFeature().getName() + ".");
+
+        Location location = new Location(startLine, startColumn, endLine, endColumn);
+        
+        ModelElement element = new ModelElement(IDRegistry.getId(binding), binding.eClass().getName(), location);
+
         element.getAttributes().put("feature", Either.forLeft(binding.getFeature().getName()));
-
         element.getChildren().put("value", Either.forLeft(fromValue(binding.getValue())));
 
         return element;
@@ -202,14 +229,37 @@ public class ModelElementFactory {
 
     public static ModelElement fromMiniTLRuntime(MiniTLRuntime runtime) {
         ModelElement element = new ModelElement(IDRegistry.getId(runtime), "Runtime");
-        
         Binding nextBinding = runtime.getNextBinding();
         Object value = ValueAspect.evaluate(runtime.getNextBinding().getValue());
         
+        element.getAttributes().put("featureValue", Either.forLeft(value));
+        
+        List<ModelElement> inputModel = new LinkedList<>();
+        for (EObject modelElement : TransformationAspect.inputModel(runtime.getTransformation())) {
+			inputModel.add(fromEObject(modelElement));
+		}
+        
+        List<ModelElement> outputModel = new LinkedList<>();
+        for (EObject modelElement : TransformationAspect.outputModel(runtime.getTransformation())) {
+			outputModel.add(fromEObject(modelElement));
+		}
+        
+        element.getChildren().put("inputModel", Either.forRight(inputModel));
+        element.getChildren().put("outputModel", Either.forRight(outputModel));
+        
         element.getRefs().put("currentRule", Either.forLeft(IDRegistry.getId(runtime.getNextRule())));
         element.getRefs().put("nextBinding", Either.forLeft(IDRegistry.getId(nextBinding)));
-        element.getAttributes().put("featureValue", Either.forLeft(value));
-
+        
         return element;
+    }
+    
+    public static ModelElement fromEObject(EObject eobject) {
+    	ModelElement element = new ModelElement(IDRegistry.getId(eobject), "EObject");
+    	
+    	for (EStructuralFeature feature : eobject.eClass().getEStructuralFeatures()) {
+    		element.getAttributes().put(feature.getName(), Either.forLeft(eobject.eGet(feature)));
+		}
+    	
+    	return element;
     }
 }

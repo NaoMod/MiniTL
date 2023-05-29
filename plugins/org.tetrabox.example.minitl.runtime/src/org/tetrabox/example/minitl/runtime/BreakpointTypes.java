@@ -17,14 +17,13 @@ public class BreakpointTypes {
 
         breakpointTypes = new LinkedList<>();
 
-        BreakpointParameter ruleAppliedParameter = new BreakpointParameter("targetElementType", false, "Rule");
-        breakpointTypes.add(new BreakpointType("ruleAppliedSingle", "Rule Applied To Single Element",
-                List.of(ruleAppliedParameter),
-                "Breaks when a specific rule is about to be applied to a single element."));
+        breakpointTypes.add(new BreakpointType("ruleApplied", "Rule Applied",
+                List.of(new BreakpointParameter("targetElementType", false, "Rule")),
+                "Breaks when a specific rule is about to be applied."));
 
-        breakpointTypes.add(new BreakpointType("ruleAppliedAll", "Rule Applied To All Elements",
-                List.of(ruleAppliedParameter),
-                "Breaks when a specific rule is about to be applied to a all elements."));
+        breakpointTypes.add(new BreakpointType("featureAssignedValue", "Value Assigned to Feature",
+        		List.of(new BreakpointParameter("targetElementType", false, "Binding")),
+                "Breaks when a value is about to be assigned to the feature of an element of the output model."));
 
         return breakpointTypes;
     }

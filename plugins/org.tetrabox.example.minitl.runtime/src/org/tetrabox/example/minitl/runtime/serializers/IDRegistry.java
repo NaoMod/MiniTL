@@ -15,4 +15,8 @@ public class IDRegistry {
 
         return ids.get(object);
     }
+    
+    public static boolean contains(Object object) {
+    	return ids.containsKey(object);
+    }
 }

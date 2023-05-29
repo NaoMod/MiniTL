@@ -93,6 +93,10 @@ public class MiniTLRuntime implements Runnable {
 		return nextBinding;
 	}
 	
+	public synchronized Transformation getTransformation() {
+		return transformation;
+	}
+	
 	public synchronized boolean isExecutionDone() {
 		return nextBinding == null;
 	}
