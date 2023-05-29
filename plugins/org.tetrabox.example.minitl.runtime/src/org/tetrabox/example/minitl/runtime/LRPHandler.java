@@ -12,6 +12,11 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 import org.tetrabox.example.MinitlStandaloneSetup;
 import org.tetrabox.example.minitl.Transformation;
+import org.tetrabox.example.minitl.runtime.exceptions.ASTNotFoundException;
+import org.tetrabox.example.minitl.runtime.exceptions.LocationException;
+import org.tetrabox.example.minitl.runtime.exceptions.RuntimeNotFoundException;
+import org.tetrabox.example.minitl.runtime.exceptions.UnknownBreakpointTypeException;
+import org.tetrabox.example.minitl.runtime.exceptions.ValueTypeException;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointArguments;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
 import org.tetrabox.example.minitl.runtime.lrp.GetBreakpointTypesResponse;
@@ -32,7 +37,7 @@ import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepManagerRegistr
 public class LRPHandler implements ILRPHandler {
 	private Injector injector;
 
-	private final String BASE_FOLDER = "/org.tetrabox.example.minitl.examples/transfos";
+	private static final String BASE_FOLDER = "/org.tetrabox.example.minitl.examples/transfos";
 	
     private Map<String, Transformation> transformations;
     private Map<String, MiniTLRuntime> runtimes;
@@ -49,7 +54,7 @@ public class LRPHandler implements ILRPHandler {
     }
 
     @Override
-    public ParseResponse parse(ParseArguments args) throws Exception {
+    public ParseResponse parse(ParseArguments args) throws LocationException, ValueTypeException {
     	XtextResourceSet rs = injector.<XtextResourceSet>getInstance(XtextResourceSet.class);
     	
     	String path = args.getSourceFile().split(BASE_FOLDER)[1];
@@ -79,13 +84,13 @@ public class LRPHandler implements ILRPHandler {
 
     @Override
     public GetBreakpointTypesResponse getBreakpointTypes() {
-        return new GetBreakpointTypesResponse(BreakpointTypes.getBreakpointTypes());
+        return new GetBreakpointTypesResponse(BreakpointTypes.getAvailableBreakpointTypes());
     }
 
     @Override
-    public InitResponse initExecution(CustomInitArguments args) throws Exception {
+    public InitResponse initExecution(CustomInitArguments args) throws ASTNotFoundException, InterruptedException {
         if (!transformations.containsKey(args.getSourceFile()))
-            throw new Exception("No AST for file \'" + args.getSourceFile() + "\'.");
+            throw new ASTNotFoundException(args.getSourceFile());
         
         String inputPath = args.getInputModel().split(BASE_FOLDER)[1];
         String inputModelPlatformPath = Paths.get(BASE_FOLDER, inputPath).toString();
@@ -103,7 +108,10 @@ public class LRPHandler implements ILRPHandler {
 		
         synchronized (runtime) {
         	new Thread(runtime).start();
-        	runtime.wait();
+        	
+        	while (!runtime.isPaused()) {
+        		runtime.wait();
+        	}
 		}
 		
 		runtimes.put(args.getSourceFile(), runtime);
@@ -112,34 +120,38 @@ public class LRPHandler implements ILRPHandler {
     }
 
     @Override
-    public StepResponse nextStep(StepArguments args) throws Exception {
+    public StepResponse nextStep(StepArguments args) throws RuntimeNotFoundException, InterruptedException {
         checkRuntimeExists(args.getSourceFile());
 
         MiniTLRuntime runtime = runtimes.get(args.getSourceFile());
         synchronized (runtime) {
-        	runtime.notify();
-        	runtime.wait();
+        	runtime.setPaused(false);
+        	runtime.notifyAll();
+        	
+        	while (!runtime.isPaused()) {
+        		runtime.wait();
+        	}
 		}
         
         return new StepResponse(runtime.isExecutionDone());
     }
 
     @Override
-    public GetRuntimeStateResponse getRuntimeState(GetRuntimeStateArguments args) throws Exception {
+    public GetRuntimeStateResponse getRuntimeState(GetRuntimeStateArguments args) throws RuntimeNotFoundException {
         checkRuntimeExists(args.getSourceFile());
 
         return new GetRuntimeStateResponse(ModelElementFactory.fromMiniTLRuntime(runtimes.get(args.getSourceFile())));
     }
 
     @Override
-    public CheckBreakpointResponse checkBreakpoint(CheckBreakpointArguments args) throws Exception {
+    public CheckBreakpointResponse checkBreakpoint(CheckBreakpointArguments args) throws RuntimeNotFoundException, UnknownBreakpointTypeException {
         checkRuntimeExists(args.getSourceFile());
 
         return runtimes.get(args.getSourceFile()).checkBreakpoint(args.getTypeId(), args.getElementId());
     }
 
-    private void checkRuntimeExists(String sourceFile) throws Exception {
+    private void checkRuntimeExists(String sourceFile) throws RuntimeNotFoundException {
         if (!runtimes.containsKey(sourceFile))
-            throw new Exception("No runtime for file \'" + sourceFile + "\'.");
+            throw new RuntimeNotFoundException(sourceFile);
     }
 }

@@ -29,9 +29,7 @@ public class CustomAnnotationsErrorResolver implements ErrorResolver {
     @Override
     public JsonError resolveError(Throwable thrownException, Method method, List<JsonNode> arguments) {
         JsonRpcError resolver = getResolverForException(thrownException, method);
-        if (notFoundResolver(resolver)) {
-            return null;
-        }
+        if (resolver == null) return null;
 
         String message = hasErrorMessage(resolver) ? resolver.message() : thrownException.getMessage();
         Object data = hasErrorData(resolver) ? resolver.data() : new ErrorData(resolver.exception().getName(), message);
@@ -49,10 +47,6 @@ public class CustomAnnotationsErrorResolver implements ErrorResolver {
             }
         }
         return null;
-    }
-
-    private boolean notFoundResolver(JsonRpcError resolver) {
-        return resolver == null;
     }
 
     private boolean hasErrorMessage(JsonRpcError em) {

@@ -13,14 +13,15 @@ public class Arguments {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-
-        if (!(obj instanceof ParseArguments))
-            return false;
+        if (this == obj) return true;
+        if (!(obj instanceof ParseArguments)) return false;
 
         Arguments castObj = (Arguments) obj;
-
         return this.sourceFile.equals(castObj.sourceFile);
+    }
+    
+    @Override
+    public int hashCode() {
+    	return sourceFile.hashCode();
     }
 }

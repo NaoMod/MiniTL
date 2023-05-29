@@ -12,7 +12,7 @@ public class ModelElement {
     private String type;
     private Map<String, Either<ModelElement, List<ModelElement>>> children;
     private Map<String, Either<String, List<String>>> refs;
-    private Map<String, Either<?, List<?>>> attributes;
+    private Map<String, Either<Object, List<Object>>> attributes;
 
     @JsonInclude(Include.NON_NULL)
     private Location location;
@@ -25,13 +25,13 @@ public class ModelElement {
         this(id, type, new HashMap<>(), new HashMap<>(), new HashMap<>(), location);
     }
 
-    public ModelElement(String id, String type, Map<String, Either<?, List<?>>> attributes,
+    public ModelElement(String id, String type, Map<String, Either<Object, List<Object>>> attributes,
             Map<String, Either<ModelElement, List<ModelElement>>> children,
             Map<String, Either<String, List<String>>> refs) {
         this(id, type, attributes, children, refs, null);
     }
 
-    public ModelElement(String id, String type, Map<String, Either<?, List<?>>> attributes,
+    public ModelElement(String id, String type, Map<String, Either<Object, List<Object>>> attributes,
             Map<String, Either<ModelElement, List<ModelElement>>> children,
             Map<String, Either<String, List<String>>> refs, Location location) {
         this.id = id;
@@ -58,7 +58,7 @@ public class ModelElement {
         return refs;
     }
 
-    public Map<String, Either<?, List<?>>> getAttributes() {
+    public Map<String, Either<Object, List<Object>>> getAttributes() {
         return attributes;
     }
 

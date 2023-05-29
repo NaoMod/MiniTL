@@ -27,11 +27,15 @@ public class MiniTLStepManager implements IStepManager {
 		try {
 			runtime.executeStep(caller, command, className, methodName);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Thread.currentThread().interrupt();
 		}
 		
-		if (runtime.isExecutionDone()) runtime.notify();
+		synchronized (runtime) {
+			if (runtime.isExecutionDone()) {
+				runtime.setPaused(true);
+				runtime.notifyAll();
+			}
+		}
 	}
 
 	@Override

@@ -33,4 +33,9 @@ public class CheckBreakpointArguments extends Arguments {
         return this.getSourceFile().equals(castObj.getSourceFile()) && this.typeId.equals(castObj.getTypeId())
                 && this.elementId.equals(castObj.getElementId());
     }
+    
+    @Override
+    public int hashCode() {
+    	return getSourceFile().hashCode() + typeId.hashCode() + elementId.hashCode();
+    }
 }

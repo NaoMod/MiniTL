@@ -26,14 +26,18 @@ import org.tetrabox.example.minitl.StringValue;
 import org.tetrabox.example.minitl.Transformation;
 import org.tetrabox.example.minitl.Value;
 import org.tetrabox.example.minitl.runtime.MiniTLRuntime;
+import org.tetrabox.example.minitl.runtime.exceptions.LocationException;
+import org.tetrabox.example.minitl.runtime.exceptions.ValueTypeException;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
 import org.tetrabox.example.minitl.semantics.ObjectTemplateAspect;
 import org.tetrabox.example.minitl.semantics.TransformationAspect;
 import org.tetrabox.example.minitl.semantics.ValueAspect;
 	
 public class ModelElementFactory {
+	
+	private ModelElementFactory() { }
 
-    public static ModelElement fromTransformation(Transformation transformation) throws Exception {
+    public static ModelElement fromTransformation(Transformation transformation) throws LocationException, ValueTypeException  {
         ModelElement element = new ModelElement(IDRegistry.getId(transformation), transformation.eClass().getName());
         element.getAttributes().put("name", Either.forLeft(transformation.getName()));
 
@@ -50,38 +54,29 @@ public class ModelElementFactory {
         return element;
     }
 
-    public static ModelElement fromRule(Rule rule) throws Exception {
+    public static ModelElement fromRule(Rule rule) throws LocationException, ValueTypeException  {
         ICompositeNode ruleNode = NodeModelUtils.getNode(rule);
         BidiIterator<INode> ite = ruleNode.getChildren().iterator();
-        Integer startLine = null;
-        Integer endLine = null;
-        Integer startColumn = null;
-        Integer endColumn = null;
+        LineAndColumn startPosition = null;
+        LineAndColumn endPosition = null;
         
-        while (ite.hasNext() && endColumn == null) {
+        while (ite.hasNext() && endPosition == null) {
             INode currentNode = ite.next();
             EObject grammarElement = currentNode.getGrammarElement();
 
             if (grammarElement instanceof Keyword && ((Keyword) grammarElement).getValue().equals("rule")) {
-            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
-            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset());
-                startLine = position.getLine();
-                startColumn = position.getColumn();
+            	startPosition = getStartPosition(currentNode);
                 continue;
             }
 
-            if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("ID")) {
-            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
-            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset() + nodeRegion.getLength());
-                endLine = position.getLine();
-                endColumn = position.getColumn() - 1;
-            }
+            if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("ID"))
+            	endPosition = getEndPosition(currentNode);
         }
 
-        if (endColumn == null)
-            throw new Exception("Couldn't process position of rule " + rule.getName() + ".");
+        if (startPosition == null || endPosition == null)
+            throw new LocationException(rule.getName());
 
-        Location location = new Location(startLine, startColumn, endLine, endColumn);
+        Location location = new Location(startPosition.getLine(), startPosition.getColumn(), endPosition.getLine(), endPosition.getColumn() - 1);
 
         ModelElement element = new ModelElement(IDRegistry.getId(rule), rule.eClass().getName(), location);
 
@@ -96,7 +91,7 @@ public class ModelElementFactory {
         return element;
     }
 
-    public static ModelElement fromObjectTemplate(ObjectTemplate objectTemplate) throws Exception {
+    public static ModelElement fromObjectTemplate(ObjectTemplate objectTemplate) throws ValueTypeException, LocationException {
         ModelElement element = new ModelElement(IDRegistry.getId(objectTemplate), objectTemplate.eClass().getName());
 
         element.getAttributes().put("name", Either.forLeft(objectTemplate.getName()));
@@ -110,39 +105,29 @@ public class ModelElementFactory {
         return element;
     }
 
-    public static ModelElement fromBinding(Binding binding) throws Exception {
+    public static ModelElement fromBinding(Binding binding) throws ValueTypeException, LocationException {
     	ICompositeNode bindingNode = NodeModelUtils.getNode(binding);
         BidiIterator<INode> ite = bindingNode.getChildren().iterator();
-        Integer startLine = null;
-        Integer endLine = null;
-        Integer startColumn = null;
-        Integer endColumn = null;
+        LineAndColumn startPosition = null;
+        LineAndColumn endPosition = null;
         
-        while (ite.hasNext() && endColumn == null) {
+        while (ite.hasNext() && endPosition == null) {
             INode currentNode = ite.next();
             EObject grammarElement = currentNode.getGrammarElement();
             
             if (grammarElement instanceof CrossReference) {
-            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
-            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset());
-                startLine = position.getLine();
-                startColumn = position.getColumn();
+            	startPosition = getStartPosition(currentNode);
                 continue;
             }
 
-            if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("Value")) {
-            	ITextRegionWithLineInformation nodeRegion = currentNode.getTextRegionWithLineInformation();
-            	LineAndColumn position = NodeModelUtils.getLineAndColumn(currentNode, nodeRegion.getOffset() + nodeRegion.getLength());
-                endLine = position.getLine();
-                endColumn = position.getColumn() - 1;
-                continue;
-            }
+            if (grammarElement instanceof RuleCall && ((RuleCall) grammarElement).getRule().getName().equals("Value"))
+            	endPosition = getEndPosition(currentNode);
         }
         
-        if (endColumn == null)
-            throw new Exception("Couldn't process position of binding " + binding.getFeature().getName() + ".");
+        if (startPosition == null || endPosition == null)
+            throw new LocationException(binding.getFeature().getName());
 
-        Location location = new Location(startLine, startColumn, endLine, endColumn);
+        Location location = new Location(startPosition.getLine(), startPosition.getColumn(), endPosition.getLine(), endPosition.getColumn() - 1);
         
         ModelElement element = new ModelElement(IDRegistry.getId(binding), binding.eClass().getName(), location);
 
@@ -152,7 +137,7 @@ public class ModelElementFactory {
         return element;
     }
 
-    public static ModelElement fromValue(Value value) throws Exception {
+    public static ModelElement fromValue(Value value) throws ValueTypeException {
         if (value instanceof StringValue)
             return fromStringValue((StringValue) value);
 
@@ -165,7 +150,7 @@ public class ModelElementFactory {
         if (value instanceof BinaryExpression)
             return fromBinaryExpression((BinaryExpression) value);
 
-        throw new Exception("Unknwon value type " + value.eClass().getName() + ".");
+        throw new ValueTypeException(value.eClass().getName());
     }
 
     public static ModelElement fromStringValue(StringValue value) {
@@ -184,7 +169,7 @@ public class ModelElementFactory {
         return element;
     }
 
-    public static ModelElement fromFieldAccessValue(FieldAccessValue value) throws Exception {
+    public static ModelElement fromFieldAccessValue(FieldAccessValue value) {
         ModelElement element = new ModelElement(IDRegistry.getId(value), value.eClass().getName());
 
         element.getAttributes().put("feature", Either.forLeft(value.getFeature().getName()));
@@ -192,7 +177,7 @@ public class ModelElementFactory {
         return element;
     }
 
-    public static ModelElement fromBinaryExpression(BinaryExpression expression) throws Exception {
+    public static ModelElement fromBinaryExpression(BinaryExpression expression) throws ValueTypeException {
         ModelElement element = new ModelElement(IDRegistry.getId(expression), expression.eClass().getName());
 
         element.getAttributes().put("operator", Either.forLeft(expression.getOperator()));
@@ -266,5 +251,15 @@ public class ModelElementFactory {
 		}
     	
     	return element;
+    }
+    
+    private static LineAndColumn getStartPosition(INode node) {
+    	ITextRegionWithLineInformation nodeRegion = node.getTextRegionWithLineInformation();
+    	return NodeModelUtils.getLineAndColumn(node, nodeRegion.getOffset());
+    }
+    
+    private static LineAndColumn getEndPosition(INode node) {
+    	ITextRegionWithLineInformation nodeRegion = node.getTextRegionWithLineInformation();
+    	return NodeModelUtils.getLineAndColumn(node, nodeRegion.getOffset() + nodeRegion.getLength());
     }
 }

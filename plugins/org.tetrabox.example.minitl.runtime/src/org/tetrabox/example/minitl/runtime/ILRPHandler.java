@@ -1,6 +1,10 @@
 package org.tetrabox.example.minitl.runtime;
 
-import org.tetrabox.example.minitl.runtime.lrp.Arguments;
+import org.tetrabox.example.minitl.runtime.exceptions.ASTNotFoundException;
+import org.tetrabox.example.minitl.runtime.exceptions.LocationException;
+import org.tetrabox.example.minitl.runtime.exceptions.RuntimeNotFoundException;
+import org.tetrabox.example.minitl.runtime.exceptions.UnknownBreakpointTypeException;
+import org.tetrabox.example.minitl.runtime.exceptions.ValueTypeException;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointArguments;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
 import org.tetrabox.example.minitl.runtime.lrp.GetBreakpointTypesResponse;
@@ -16,54 +20,38 @@ import com.googlecode.jsonrpc4j.JsonRpcError;
 import com.googlecode.jsonrpc4j.JsonRpcErrors;
 import com.googlecode.jsonrpc4j.JsonRpcParam;
 
-class CustomInitArguments extends Arguments {
-	private String inputModel;
-	private String outputModel;
-	
-	public String getInputModel() {
-		return inputModel;
-	}
-	public void setInputModel(String inputModel) {
-		this.inputModel = inputModel;
-	}
-	
-	public String getOutputModel() {
-		return outputModel;
-	}
-	
-	public void setOutputModel(String outputModel) {
-		this.outputModel = outputModel;
-	}
-}
-
 public interface ILRPHandler {
 
    @JsonRpcErrors({
-         @JsonRpcError(exception = Exception.class, code = -32002)
+         @JsonRpcError(exception = LocationException.class, code = -32002),
+         @JsonRpcError(exception = ValueTypeException.class, code = -32003)
    })
-   ParseResponse parse(@JsonRpcParam(value = "params") ParseArguments args) throws Exception;
+   ParseResponse parse(@JsonRpcParam(value = "params") ParseArguments args) throws LocationException, ValueTypeException;
 
    GetBreakpointTypesResponse getBreakpointTypes();
 
    @JsonRpcErrors({
-         @JsonRpcError(exception = Exception.class, code = -32002)
+         @JsonRpcError(exception = ASTNotFoundException.class, code = -32004),
+         @JsonRpcError(exception = InterruptedException.class, code = -32005)
    })
-   InitResponse initExecution(@JsonRpcParam(value = "params") CustomInitArguments args) throws Exception;
-
-   @JsonRpcErrors({	
-         @JsonRpcError(exception = Exception.class, code = -32002)
-   })
-   StepResponse nextStep(@JsonRpcParam(value = "params") StepArguments args) throws Exception;
+   InitResponse initExecution(@JsonRpcParam(value = "params") CustomInitArguments args) throws ASTNotFoundException, InterruptedException;
 
    @JsonRpcErrors({
-         @JsonRpcError(exception = Exception.class, code = -32002)
+	   @JsonRpcError(exception = InterruptedException.class, code = -32005),
+       @JsonRpcError(exception = RuntimeNotFoundException.class, code = -32006)
+   })
+   StepResponse nextStep(@JsonRpcParam(value = "params") StepArguments args) throws RuntimeNotFoundException, InterruptedException;
+
+   @JsonRpcErrors({
+       @JsonRpcError(exception = RuntimeNotFoundException.class, code = -32006)
    })
    GetRuntimeStateResponse getRuntimeState(@JsonRpcParam(value = "params") GetRuntimeStateArguments args)
-         throws Exception;
+         throws RuntimeNotFoundException;
 
    @JsonRpcErrors({
-         @JsonRpcError(exception = Exception.class, code = -32002)
+       @JsonRpcError(exception = RuntimeNotFoundException.class, code = -32006),
+       @JsonRpcError(exception = UnknownBreakpointTypeException.class, code = -32007),
    })
    CheckBreakpointResponse checkBreakpoint(@JsonRpcParam(value = "params") CheckBreakpointArguments args)
-         throws Exception;
+         throws RuntimeNotFoundException, UnknownBreakpointTypeException;
 }

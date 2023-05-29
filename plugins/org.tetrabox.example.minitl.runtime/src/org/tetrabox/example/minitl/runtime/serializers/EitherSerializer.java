@@ -24,6 +24,6 @@ public class EitherSerializer<L, R> extends StdSerializer<Either<L, R>> {
             gen.writeObject(value.getLeft());
         } else {
             gen.writeObject(value.getRight());
-        }
+        }	
     }
 }

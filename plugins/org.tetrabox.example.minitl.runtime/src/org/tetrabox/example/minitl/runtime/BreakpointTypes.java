@@ -7,25 +7,27 @@ import org.tetrabox.example.minitl.runtime.lrp.BreakpointParameter;
 import org.tetrabox.example.minitl.runtime.lrp.BreakpointType;
 
 public class BreakpointTypes {
+	
+	private BreakpointTypes() { }
 
-    private static List<BreakpointType> breakpointTypes;
+    private static List<BreakpointType> availableBreakpointTypes;
 
-    public static List<BreakpointType> getBreakpointTypes() {
-        if (breakpointTypes != null) {
-            return breakpointTypes;
+    public static List<BreakpointType> getAvailableBreakpointTypes() {
+        if (availableBreakpointTypes != null) {
+            return availableBreakpointTypes;
         }
 
-        breakpointTypes = new LinkedList<>();
+        availableBreakpointTypes = new LinkedList<>();
 
-        breakpointTypes.add(new BreakpointType("ruleApplied", "Rule Applied",
+        availableBreakpointTypes.add(new BreakpointType("ruleApplied", "Rule Applied",
                 List.of(new BreakpointParameter("targetElementType", false, "Rule")),
                 "Breaks when a specific rule is about to be applied."));
 
-        breakpointTypes.add(new BreakpointType("featureAssignedValue", "Value Assigned to Feature",
+        availableBreakpointTypes.add(new BreakpointType("featureAssignedValue", "Value Assigned to Feature",
         		List.of(new BreakpointParameter("targetElementType", false, "Binding")),
                 "Breaks when a value is about to be assigned to the feature of an element of the output model."));
 
-        return breakpointTypes;
+        return availableBreakpointTypes;
     }
 
 }

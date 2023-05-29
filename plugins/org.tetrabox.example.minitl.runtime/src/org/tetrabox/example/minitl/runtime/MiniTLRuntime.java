@@ -8,10 +8,10 @@ import org.eclipse.emf.ecore.EObject;
 import org.tetrabox.example.minitl.Binding;
 import org.tetrabox.example.minitl.Rule;
 import org.tetrabox.example.minitl.Transformation;
+import org.tetrabox.example.minitl.runtime.exceptions.UnknownBreakpointTypeException;
 import org.tetrabox.example.minitl.runtime.lrp.CheckBreakpointResponse;
 import org.tetrabox.example.minitl.runtime.serializers.IDRegistry;
 import org.tetrabox.example.minitl.semantics.TransformationAspect;
-import org.tetrabox.example.minitl.semantics.ValueAspect;
 
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
 
@@ -26,10 +26,13 @@ public class MiniTLRuntime implements Runnable {
 	private Binding nextBinding;
 	private Set<Rule> appliedRules;
 	
+	private boolean isPaused;
+	
 	public MiniTLRuntime(Transformation transformation, List<String> transformationArgs) {
 		this.transformation = transformation;
 		this.transformationArgs = transformationArgs;
 		appliedRules = new HashSet<>();
+		isPaused = false;
 	}
 	
 	@Override
@@ -41,8 +44,13 @@ public class MiniTLRuntime implements Runnable {
 	public synchronized void executeStep(Object caller, StepCommand command, String className, String methodName) throws InterruptedException {
 		if (className.equals("Binding") && methodName.equals("assign")) {
 			nextBinding = (Binding) caller;
-			notify();
-			wait();
+			
+			isPaused = true;
+			notifyAll();
+			
+			while (isPaused) {
+				wait();
+			}
 			
 			appliedRules.add(findContainingRule(nextBinding));
 			nextBinding = null;
@@ -51,7 +59,7 @@ public class MiniTLRuntime implements Runnable {
 		command.execute();
 	}
 	
-	public synchronized CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws Exception {
+	public synchronized CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws UnknownBreakpointTypeException {
         if (isExecutionDone())
             return new CheckBreakpointResponse(false);
 
@@ -70,7 +78,6 @@ public class MiniTLRuntime implements Runnable {
                 break;
 
             case "featureAssignedValue":
-            	Binding nextBinding = getNextBinding();
                 isActivated = IDRegistry.getId(nextBinding).equals(elementId);
 
                 if (isActivated) message = "Feature '" + nextBinding.getFeature().getName() + "' is about to be assigned a value.";
@@ -78,7 +85,7 @@ public class MiniTLRuntime implements Runnable {
                 break;
 
             default:
-                throw new Exception("Unknown breakpoint type " + type + ".");
+                throw new UnknownBreakpointTypeException(type);
         }
 	
         return new CheckBreakpointResponse(isActivated, message);
@@ -102,9 +109,17 @@ public class MiniTLRuntime implements Runnable {
 		return nextBinding == null;
 	}
 	
+	public synchronized boolean isPaused() {
+		return isPaused;
+	}
+
+	public synchronized void setPaused(boolean isPaused) {
+		this.isPaused = isPaused;
+	}
+
 	private Rule findContainingRule(EObject object) {
 		Rule rule = null;
-        EObject currentAncestor = getNextBinding().eContainer();
+        EObject currentAncestor = object.eContainer();
         
         // find containing rule
         while (rule == null) {
