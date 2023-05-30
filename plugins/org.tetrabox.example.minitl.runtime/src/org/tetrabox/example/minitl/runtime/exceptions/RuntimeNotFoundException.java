@@ -1,5 +1,8 @@
 package org.tetrabox.example.minitl.runtime.exceptions;
 
+/**
+ * Thrown when a runtime cannot be found for a source file.
+ */
 public class RuntimeNotFoundException extends Exception {
 	private final String sourceFile;
 

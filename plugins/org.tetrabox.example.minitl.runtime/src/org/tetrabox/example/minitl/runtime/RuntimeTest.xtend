@@ -18,6 +18,9 @@ class RuntimeTest {
 
 	static StreamServer streamServer;
 	
+	/**
+	 * Starts an LRP server on port <PORT>.
+	 */
 	@Test
 	def void test() {
 		var bindAddress = InetAddress.getByName(HOST_NAME);

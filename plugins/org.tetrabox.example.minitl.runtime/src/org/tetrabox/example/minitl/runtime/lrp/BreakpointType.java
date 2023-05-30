@@ -2,10 +2,21 @@ package org.tetrabox.example.minitl.runtime.lrp;
 
 import java.util.List;
 
+/**
+ * Breakpoint type defined by the language runtime.
+ */
 public class BreakpointType {
+	
+	/** Unique identifier of the breakpoint type. */
     private String id;
+    
+    /** Human-readable name of the breakpoint type. */
     private String name;
+    
+    /** Parameters needed to evaluate a breakpoint of this type. */
     private List<BreakpointParameter> parameters;
+    
+    /** Human-readable description of the breakpoint type. */
     private String description;
 
     public BreakpointType(String id, String name, List<BreakpointParameter> parameters, String description) {

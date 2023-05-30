@@ -2,6 +2,9 @@ package org.tetrabox.example.minitl.runtime;
 
 import org.tetrabox.example.minitl.runtime.lrp.Arguments;
 
+/**
+ * MiniTL-specific arguments for the initialization of the execution.
+ */
 public class CustomInitArguments extends Arguments {
 	private String inputModel;
 	private String outputModel;
@@ -9,6 +12,7 @@ public class CustomInitArguments extends Arguments {
 	public String getInputModel() {
 		return inputModel;
 	}
+	
 	public void setInputModel(String inputModel) {
 		this.inputModel = inputModel;
 	}

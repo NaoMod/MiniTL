@@ -1,5 +1,8 @@
 package org.tetrabox.example.minitl.runtime.exceptions;
 
+/**
+ * Thrown when the type of a value is unknown.
+ */
 public class ValueTypeException extends Exception {
 	private final String type;
 

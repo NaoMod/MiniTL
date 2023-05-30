@@ -1,6 +1,11 @@
 package org.tetrabox.example.minitl.runtime.lrp;
 
+/**
+ * Base class for LRP request arguments.
+ */
 public class Arguments {
+	
+	/** Source file targeted by the service call. */
     private String sourceFile;
 
     public String getSourceFile() {

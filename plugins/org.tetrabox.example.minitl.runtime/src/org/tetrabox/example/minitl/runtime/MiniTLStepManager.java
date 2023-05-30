@@ -43,11 +43,13 @@ public class MiniTLStepManager implements IStepManager {
 		return true;
 	}
 	
-	public void addRuntime(Transformation transformation, MiniTLRuntime runtime) {
+	/**
+	 * Registers a runtime for a transformation.
+	 * 
+	 * @param transformation The transformation for which to register a runtime.
+	 * @param runtime The runtime to register.
+	 */
+	public void registerRuntime(Transformation transformation, MiniTLRuntime runtime) {
 		runtimes.put(transformation, runtime);
-	}
-	
-	public void stepManagerRemoveRuntime(Transformation transformation) {
-		runtimes.remove(transformation);
 	}
 }

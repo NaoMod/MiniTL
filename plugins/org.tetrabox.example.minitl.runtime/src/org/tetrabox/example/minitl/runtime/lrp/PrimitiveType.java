@@ -1,5 +1,8 @@
 package org.tetrabox.example.minitl.runtime.lrp;
 
+/**
+ * Primitive type of a value.
+ */
 public enum PrimitiveType {
     BOOLEAN ("boolean"),
     STRING ("string"),

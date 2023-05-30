@@ -7,13 +7,27 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+/**
+ * Element of the AST or runtime state.
+ */
 public class ModelElement {
+	
+	/** Unique identifier of the element. */
     private String id;
+    
+    /** Type of the element. */
     private String type;
+    
+    /** Containment relations with other elements. */
     private Map<String, Either<ModelElement, List<ModelElement>>> children;
+    
+    /** References to other elements. */
     private Map<String, Either<String, List<String>>> refs;
+    
+    /** Attributes with primitive values. */
     private Map<String, Either<Object, List<Object>>> attributes;
 
+    /** Location of the element in its original source file. */
     @JsonInclude(Include.NON_NULL)
     private Location location;
 

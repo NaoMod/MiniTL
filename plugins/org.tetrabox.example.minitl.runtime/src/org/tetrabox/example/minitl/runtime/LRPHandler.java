@@ -33,7 +33,9 @@ import com.google.inject.Injector;
 
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepManagerRegistry;
 
-
+/**
+ * Implements LRP services for the MiniTL runtime.
+ */
 public class LRPHandler implements ILRPHandler {
 	private Injector injector;
 
@@ -83,11 +85,6 @@ public class LRPHandler implements ILRPHandler {
     }
 
     @Override
-    public GetBreakpointTypesResponse getBreakpointTypes() {
-        return new GetBreakpointTypesResponse(BreakpointTypes.getAvailableBreakpointTypes());
-    }
-
-    @Override
     public InitResponse initExecution(CustomInitArguments args) throws ASTNotFoundException, InterruptedException {
         if (!transformations.containsKey(args.getSourceFile()))
             throw new ASTNotFoundException(args.getSourceFile());
@@ -104,7 +101,7 @@ public class LRPHandler implements ILRPHandler {
         Transformation transformation = transformations.get(args.getSourceFile());
         
         MiniTLRuntime runtime = new MiniTLRuntime(transformation, transformationArgs);
-        stepManager.addRuntime(transformation, runtime);
+        stepManager.registerRuntime(transformation, runtime);
 		
         synchronized (runtime) {
         	new Thread(runtime).start();
@@ -141,6 +138,11 @@ public class LRPHandler implements ILRPHandler {
         checkRuntimeExists(args.getSourceFile());
 
         return new GetRuntimeStateResponse(ModelElementFactory.fromMiniTLRuntime(runtimes.get(args.getSourceFile())));
+    }
+    
+    @Override
+    public GetBreakpointTypesResponse getBreakpointTypes() {
+        return new GetBreakpointTypesResponse(BreakpointTypes.getAvailableBreakpointTypes());
     }
 
     @Override

@@ -1,9 +1,20 @@
 package org.tetrabox.example.minitl.runtime.lrp;
 
+/**
+ * Location in a textual source file.
+ */
 public class Location {
+	
+	/** Starting line. */
     private int line;
+    
+    /** Starting column. */
     private int column;
+    
+    /** End line. */
     private int endLine;
+    
+    /** End column. */
     private int endColumn;
 
     public Location(int line, int column, int endLine, int endColumn) {

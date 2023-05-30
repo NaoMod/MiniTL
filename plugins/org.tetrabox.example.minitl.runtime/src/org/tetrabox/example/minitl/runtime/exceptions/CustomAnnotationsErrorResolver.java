@@ -10,6 +10,9 @@ import com.googlecode.jsonrpc4j.JsonRpcError;
 import com.googlecode.jsonrpc4j.JsonRpcErrors;
 import com.googlecode.jsonrpc4j.ReflectionUtil;
 
+/**
+ * Resolves errors for JSON-RPC responses.
+ */
 public class CustomAnnotationsErrorResolver implements ErrorResolver {
     private static CustomAnnotationsErrorResolver instance;
 

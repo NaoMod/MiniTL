@@ -4,6 +4,12 @@ import org.tetrabox.example.minitl.runtime.serializers.EitherSerializer;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
+/**
+ * Union type.
+ *
+ * @param <L> First possible type.
+ * @param <R> Second possible type.
+ */
 @JsonSerialize(using = EitherSerializer.class)
 public class Either<L, R> {
 

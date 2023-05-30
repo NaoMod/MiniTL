@@ -1,5 +1,8 @@
 package org.tetrabox.example.minitl.runtime.exceptions;
 
+/**
+ * Thrown when a location cannot be computed for a model element.
+ */
 public class LocationException extends Exception {
 	private final String elementName;
 

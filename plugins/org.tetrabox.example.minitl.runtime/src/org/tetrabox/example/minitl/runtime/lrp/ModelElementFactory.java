@@ -235,7 +235,7 @@ public class ModelElementFactory {
         element.getChildren().put("outputModel", Either.forRight(outputModel));
         element.getChildren().put("currentObject", Either.forLeft(fromEObject(currentObject)));
         
-        element.getRefs().put("currentRule", Either.forLeft(IDRegistry.getId(runtime.getNextRule())));
+        element.getRefs().put("currentRule", Either.forLeft(IDRegistry.getId(runtime.getCurrentRule())));
         element.getRefs().put("nextBinding", Either.forLeft(IDRegistry.getId(nextBinding)));
         
         return element;

@@ -16,7 +16,7 @@ import org.tetrabox.example.minitl.semantics.TransformationAspect;
 import fr.inria.diverse.k3.al.annotationprocessor.stepmanager.StepCommand;
 
 /**
- * Manages the execution of steps for MiniTL programs.
+ * Manages the execution of steps for a MiniTL program.
  */
 public class MiniTLRuntime implements Runnable {
 	
@@ -41,6 +41,17 @@ public class MiniTLRuntime implements Runnable {
 		TransformationAspect.execute(transformation);
 	}
 
+	/**
+	 * Executes a step, as defined in the Kermeta3 semantics.
+	 * When a binding assignment is about to be performed, the running thread is paused and all threads waiting on
+	 * this runtime are notified.
+	 * 
+	 * @param caller The object on which the step is called.
+	 * @param command The step command about to be performed.
+	 * @param className The name of the class of the caller.
+	 * @param methodName The name of the method implementing the step.
+	 * @throws InterruptedException If the running thread is interrupted.
+	 */
 	public synchronized void executeStep(Object caller, StepCommand command, String className, String methodName) throws InterruptedException {
 		if (className.equals("Binding") && methodName.equals("assign")) {
 			nextBinding = (Binding) caller;
@@ -59,6 +70,14 @@ public class MiniTLRuntime implements Runnable {
 		command.execute();
 	}
 	
+	/**
+	 * Checks whether a breakpoint is activated.
+	 * 
+	 * @param type The type of breakpoint to check.
+	 * @param elementId The id of the element to which the breakpoint is assigned.
+	 * @return The LRP response to the request.
+	 * @throws UnknownBreakpointTypeException If the breakpoint type is not defined by the language runtime.
+	 */
 	public synchronized CheckBreakpointResponse checkBreakpoint(String type, String elementId) throws UnknownBreakpointTypeException {
         if (isExecutionDone())
             return new CheckBreakpointResponse(false);
@@ -91,7 +110,7 @@ public class MiniTLRuntime implements Runnable {
         return new CheckBreakpointResponse(isActivated, message);
     }
 	
-	public synchronized Rule getNextRule() {
+	public synchronized Rule getCurrentRule() {
 		if (nextBinding == null) return null;
 		
 		return findContainingRule(nextBinding);
@@ -117,12 +136,18 @@ public class MiniTLRuntime implements Runnable {
 		this.isPaused = isPaused;
 	}
 
+	/**
+	 * Finds the rule containing an EObject.
+	 * 
+	 * @param object The EObject for which to search for a containing rule.
+	 * @return The rule containing the EObject, or null if there is none.
+	 */
 	private Rule findContainingRule(EObject object) {
 		Rule rule = null;
         EObject currentAncestor = object.eContainer();
         
         // find containing rule
-        while (rule == null) {
+        while (rule == null && currentAncestor != null) {
         	if (currentAncestor instanceof Rule) rule = (Rule) currentAncestor;
         	currentAncestor = currentAncestor.eContainer();
         }
